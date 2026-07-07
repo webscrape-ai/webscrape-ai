@@ -1,0 +1,44 @@
+name: Release Go SDK
+
+# The Go SDK "publishes" purely by git tag: pushing `sdk/go/vX.Y.Z` makes
+# github.com/webscrape-ai/webscrape-ai/sdk/go@vX.Y.Z resolvable by `go get`.
+# This job validates the tagged code and warms the Go module proxy so
+# pkg.go.dev indexes the new version right away. No secrets required.
+#
+# IMPORTANT: the module lives in a subdirectory, so the tag MUST be of the
+# form `sdk/go/vX.Y.Z` (matching the module path suffix) — NOT `go-vX.Y.Z`.
+# Bump the Version constant in sdk/go/version.go to match before tagging.
+
+on:
+  push:
+    tags:
+      - "sdk/go/v*"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  release:
+    name: Validate and index
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Build, vet, test
+        working-directory: sdk/go
+        run: |
+          go build ./...
+          go vet ./...
+          go test ./...
+
+      - name: Warm the Go module proxy (triggers pkg.go.dev indexing)
+        if: startsWith(github.ref, 'refs/tags/sdk/go/')
+        run: |
+          VERSION="${GITHUB_REF_NAME#sdk/go/}"
+          curl -fsSL "https://proxy.golang.org/github.com/webscrape-ai/webscrape-ai/sdk/go/@v/${VERSION}.info"

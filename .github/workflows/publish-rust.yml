@@ -1,0 +1,42 @@
+name: Publish Rust SDK to crates.io
+
+# Publishes sdk/rust to crates.io as `webscrape-ai`.
+#
+# Requires one repo secret:
+#   CARGO_REGISTRY_TOKEN - a crates.io API token (scopes: publish-new +
+#                          publish-update), owned by `packet-sent`.
+#   (Alternatively, crates.io Trusted Publishing via OIDC can replace this
+#    token once the crate exists — see rust-lang/crates-io-auth-action.)
+#
+# Trigger by pushing a tag like `rust-v0.1.0`, or run manually. Bump the
+# version in Cargo.toml first.
+
+on:
+  push:
+    tags:
+      - "rust-v*"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: sdk/rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - run: cargo test --all-features
+
+      # `cargo publish` reads CARGO_REGISTRY_TOKEN from the environment and
+      # runs its own verification build before uploading.
+      - run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

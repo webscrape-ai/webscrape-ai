@@ -32,6 +32,16 @@
     <developerConnection>scm:git:https://github.com/webscrape-ai/webscrape-ai.git</developerConnection>
   </scm>
 
+  <!-- Maven Central requires at least one developer entry. -->
+  <developers>
+    <developer>
+      <name>webscrape.ai</name>
+      <email>hello@webscrape.ai</email>
+      <organization>webscrape.ai</organization>
+      <organizationUrl>https://webscrape.ai</organizationUrl>
+    </developer>
+  </developers>
+
   <properties>
     <maven.compiler.release>11</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -92,4 +102,81 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!-- Release-only. Activated with `mvn -Prelease deploy` (see the Java
+         publish workflow). Adds the sources + javadoc jars, GPG signatures,
+         and the Central Portal uploader that Maven Central mandates. Normal
+         `mvn test` / `mvn package` do not activate this profile. -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.3.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.11.2</version>
+            <configuration>
+              <doclint>none</doclint>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.7</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <!-- Non-interactive signing in CI (gpg 2.1+). -->
+              <gpgArguments>
+                <arg>--pinentry-mode</arg>
+                <arg>loopback</arg>
+              </gpgArguments>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.7.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>true</autoPublish>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

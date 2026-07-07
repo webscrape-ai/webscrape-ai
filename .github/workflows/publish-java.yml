@@ -1,0 +1,61 @@
+name: Publish Java SDK to Maven Central
+
+# Publishes sdk/java (ai.webscrape:webscrape-sdk) to Maven Central via the
+# Sonatype Central Portal, using the `release` profile added to pom.xml.
+#
+# Requires these repo secrets:
+#   MAVEN_CENTRAL_USERNAME / MAVEN_CENTRAL_PASSWORD
+#       - a Central Portal user token (central.sonatype.com -> Account ->
+#         Generate User Token). NOT your login password.
+#   MAVEN_GPG_PRIVATE_KEY  - ASCII-armored private key
+#                            (`gpg --armor --export-secret-keys <KEYID>`).
+#   MAVEN_GPG_PASSPHRASE   - passphrase for that key.
+#
+# One-time prerequisites (external, on your side):
+#   1. Register + verify the `ai.webscrape` namespace on central.sonatype.com
+#      (DNS TXT record on webscrape.ai). Central will not accept the artifact
+#      until the namespace is verified.
+#   2. Publish the GPG *public* key to a keyserver
+#      (e.g. `gpg --keyserver keyserver.ubuntu.com --send-keys <KEYID>`).
+#
+# Trigger by pushing a tag like `java-v0.1.0`, or run manually. Bump <version>
+# in pom.xml first.
+
+on:
+  push:
+    tags:
+      - "java-v*"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: sdk/java
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          server-id: central
+          server-username: MAVEN_CENTRAL_USERNAME
+          server-password: MAVEN_CENTRAL_PASSWORD
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      # The `release` profile attaches sources+javadoc, GPG-signs everything,
+      # and uploads via central-publishing-maven-plugin (autoPublish=true).
+      - name: Publish to Maven Central
+        run: mvn -B -Prelease deploy
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
