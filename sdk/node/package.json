@@ -1,0 +1,65 @@
+{
+  "name": "webscrape-ai",
+  "version": "0.1.0",
+  "description": "Official Node/TypeScript SDK for the webscrape.ai API",
+  "license": "MIT",
+  "author": "webscrape.ai",
+  "homepage": "https://webscrape.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webscrape-ai/webscrape-ai.git",
+    "directory": "sdk/node"
+  },
+  "bugs": "https://github.com/webscrape-ai/webscrape-ai/issues",
+  "keywords": [
+    "webscrape",
+    "web-scraping",
+    "scraper",
+    "smartscraper",
+    "llm",
+    "extraction",
+    "smartbrowse",
+    "api",
+    "sdk"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run && tsc --noEmit",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

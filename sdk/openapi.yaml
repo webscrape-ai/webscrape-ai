@@ -1,0 +1,861 @@
+openapi: 3.1.0
+info:
+  title: webscrape.ai API
+  version: "1.0"
+  description: |
+    The public webscrape.ai API. Fetch pages and get back structured JSON,
+    HTML, markdown, or replayed browser output.
+
+    Every response is wrapped in one of three envelope shapes —
+    `completed`, `queued`, or `error`. Always check the top-level
+    `status` first, then read `data` (success or queued) or `error`
+    (failure).
+  contact:
+    name: webscrape.ai support
+    email: hello@webscrape.ai
+    url: https://webscrape.ai
+
+servers:
+  - url: https://api.webscrape.ai/v1
+    description: Production
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Scrape
+    description: Raw fetching and structured extraction.
+  - name: SmartBrowse
+    description: Real-Chrome recipe replay with pagination and interactions.
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+
+paths:
+  /scrape:
+    post:
+      tags: [Scrape]
+      operationId: scrape
+      summary: Fetch a URL as HTML, markdown, or links
+      description: |
+        Fetch a URL with the standard fetcher or optional stealth. Returns
+        HTML by default. Pass `clean: true` for cleaned markdown, or
+        `extract_links: true` to receive a deduplicated list of outbound
+        links. PDFs are auto-converted to markdown.
+
+        **Cost:** 1 credit (+2 with `stealth: true`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScrapeRequest"
+      responses:
+        "200":
+          description: Successfully fetched.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScrapeSuccess"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/PaymentRequired" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "502": { $ref: "#/components/responses/ExtractionUnavailable" }
+
+  /smartscraper:
+    post:
+      tags: [Scrape]
+      operationId: smartscraper
+      summary: Structured extraction with JSON-schema validation
+      description: |
+        Give a URL and a `user_prompt` (and optionally an `output_schema`),
+        get JSON back. Handles long content, noisy pages, and complex
+        schemas.
+
+        **Cost:** 5 credits (+5 with `stealth: true`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SmartScraperRequest"
+      responses:
+        "200":
+          description: Successfully extracted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmartScraperSuccess"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/PaymentRequired" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationFailed" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "502": { $ref: "#/components/responses/ExtractionUnavailable" }
+
+  /smartbrowse/recipes/{id}/run:
+    post:
+      tags: [SmartBrowse]
+      operationId: dispatchSmartBrowseRun
+      summary: Dispatch a SmartBrowse run
+      description: |
+        Returns immediately with a `run_id`. Poll `GET /v1/smartbrowse/runs/{id}`
+        for progress and final result.
+
+        **Cost:** 2 credits per page extracted (initial load + each pagination
+        hop). Charged on completion only. Failed and cancelled runs cost 0.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Opaque recipe ID (~11 base62 chars).
+          schema: { type: string, example: "m3Yc2tFvN8q" }
+      responses:
+        "202":
+          description: Run dispatched.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmartBrowseRunQueued"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/PaymentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "502": { $ref: "#/components/responses/ExtractionUnavailable" }
+
+  /smartbrowse/runs/{id}:
+    get:
+      tags: [SmartBrowse]
+      operationId: getSmartBrowseRun
+      summary: Poll a SmartBrowse run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Opaque run ID (~11 base62 chars).
+          schema: { type: string, example: "k7Xb9dRmQ2p" }
+      responses:
+        "200":
+          description: Run state returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmartBrowseRunSuccess"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /smartbrowse/usage:
+    get:
+      tags: [SmartBrowse]
+      operationId: getSmartBrowseUsage
+      summary: Current SmartBrowse plan caps and 30-day usage
+      description: |
+        Returns the caller's rolling-30-day run count, plan caps
+        (runs/month, pages/run, cost/page), schedule allowance, and a
+        summary of their last run (if any).
+
+        Polling is free — `credits_used` is always 0.
+      responses:
+        "200":
+          description: Usage returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmartBrowseUsageSuccess"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+# ---------------------------------------------------------------------------
+# Components
+# ---------------------------------------------------------------------------
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        Generate from the [dashboard](https://webscrape.ai/app/api-keys).
+        Format: `wsg_live_<32 base62 chars>`.
+
+  # ---- envelope primitives -------------------------------------------------
+  schemas:
+
+    EnvelopeBase:
+      type: object
+      required: [status, request_id]
+      properties:
+        status:
+          type: string
+          enum: [completed, queued, error]
+          description: Discriminator for the envelope variant.
+        request_id:
+          type: string
+          example: "req_aB3xY9Kp"
+          description: |
+            Per-request id. Also returned as the `X-Request-ID` response
+            header. Include it when reporting issues.
+
+    EnvelopeError:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          required: [error]
+          properties:
+            status:
+              type: string
+              enum: [error]
+            error:
+              type: object
+              required: [code, message]
+              properties:
+                code:
+                  $ref: "#/components/schemas/ErrorCode"
+                message:
+                  type: string
+                  description: Human-readable. May change between releases. Log it; don't pattern-match.
+                details:
+                  description: Optional structured context (e.g. `{balance, required}` for `insufficient_credits`).
+
+    ErrorCode:
+      type: string
+      description: Stable error code. SDKs branch on this.
+      enum:
+        - invalid_request
+        - unauthorized
+        - insufficient_credits
+        - email_verification_required
+        - forbidden
+        - not_found
+        - conflict
+        - account_deletion_pending
+        - validation_failed
+        - rate_limited
+        - internal_error
+        - service_unavailable
+
+    # ---- /scrape ----------------------------------------------------------
+    ScrapeRequest:
+      type: object
+      required: [website_url]
+      properties:
+        website_url:
+          type: string
+          format: uri
+          example: "https://example.com"
+        clean:
+          type: boolean
+          default: false
+          description: Convert HTML to cleaned markdown.
+        parse_mode:
+          type: string
+          enum: [accurate, speed]
+          default: accurate
+          description: |
+            Cleaner mode when `clean: true`. `accurate` is more forgiving
+            on malformed pages; `speed` is faster.
+        tag_truncate:
+          type: boolean
+          default: true
+          description: |
+            When `clean: true`, replace inline images with their alt text
+            to reduce noise. Disable to keep the original image tags.
+        extract_links:
+          type: boolean
+          default: false
+          description: Include a deduplicated list of outbound links.
+        include_tags:
+          type: array
+          items: { type: string }
+          description: "Whitelist of HTML tags to keep when `clean: true`."
+        exclude_tags:
+          type: array
+          items: { type: string }
+          description: "Blacklist of HTML tags to drop when `clean: true`."
+        headers:
+          type: object
+          additionalProperties: { type: string }
+          description: |
+            Custom request headers forwarded to the fetcher (e.g. a
+            specific `User-Agent` or `Accept-Language`). Providing any
+            headers disables URL caching for this request.
+        max_age:
+          type: integer
+          minimum: 0
+          description: |
+            URL-cache opt-in (three-state).
+
+              * **Omitted**     — no cache: every call fetches fresh.
+              * **>0**          — return a cached entry if it's fresher
+                                  than `max_age` seconds, otherwise fetch
+                                  and write.
+
+            Stealth requests, custom-headered requests, and URLs with
+            query strings or fragments are never cached.
+        stealth:
+          type: boolean
+          default: false
+          description: Use stealth mode. +2 credits.
+
+    LinkInfo:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+        text: { type: string }
+
+    PageMetadata:
+      type: object
+      properties:
+        title: { type: [string, "null"] }
+        description: { type: [string, "null"] }
+        language: { type: [string, "null"] }
+
+    ScrapeData:
+      type: object
+      required: [request_id]
+      properties:
+        request_id:
+          type: string
+          description: Extraction id. Distinct from the envelope's `request_id`.
+        html:
+          type: string
+          description: "Raw HTML, or markdown when `clean: true`."
+        content_type:
+          type: string
+          enum: [html, pdf]
+          description: |
+            `html` for normal pages, `pdf` when the URL served a PDF
+            (the `html` field then carries the extracted markdown).
+        cleaned:
+          type: boolean
+          description: "True when the cleaner pass actually ran (HTML + `clean: true`)."
+        links:
+          type: array
+          description: "Present only when `extract_links: true`."
+          items: { $ref: "#/components/schemas/LinkInfo" }
+        metadata:
+          allOf: [{ $ref: "#/components/schemas/PageMetadata" }]
+          description: "HTML-only. Null for PDFs."
+        latency_ms:
+          type: integer
+          description: Total fetch time in milliseconds.
+
+    ScrapeSuccess:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          required: [data, credits_used, credits_remaining]
+          properties:
+            status: { type: string, enum: [completed] }
+            data: { $ref: "#/components/schemas/ScrapeData" }
+            credits_used: { type: integer, example: 1 }
+            credits_remaining: { type: integer, example: 499 }
+
+    # ---- /smartscraper ----------------------------------------------------
+    SmartScraperRequest:
+      type: object
+      required: [website_url, user_prompt]
+      properties:
+        website_url:
+          type: string
+          format: uri
+          example: "https://news.ycombinator.com"
+        user_prompt:
+          type: string
+          description: Plain-English description of what to extract.
+          example: "Extract the front-page stories with title, url, and score."
+        output_schema:
+          type: object
+          additionalProperties: true
+          description: |
+            JSON Schema enforced on the extracted output. When supplied,
+            the result is validated against the schema and one repair
+            attempt is made before returning `validation_failed`.
+            Providing both `user_prompt` and `output_schema` gives the
+            best results.
+          example:
+            type: object
+            properties:
+              stories:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title: { type: string }
+                    url: { type: string }
+                    score: { type: integer }
+        page_complexity:
+          type: string
+          enum: [low, high]
+          default: low
+          description: |
+            `low` (default) is faster and cheaper. Bump to `high` for
+            visually busy pages or schemas with many nested fields.
+        detail_level:
+          type: string
+          enum: [low, medium, high]
+          default: medium
+          description: How exhaustively to populate the result.
+        parse_mode:
+          type: string
+          enum: [accurate, speed]
+          default: accurate
+          description: |
+            Cleaner mode. `accurate` is more forgiving on malformed pages;
+            `speed` is faster.
+        plain_text:
+          type: boolean
+          default: false
+          description: |
+            Return the raw extracted text under `result` instead of a
+            parsed JSON object. Bypasses `output_schema` validation.
+        include_tags:
+          type: array
+          items: { type: string }
+          description: Whitelist of HTML tags to keep before extraction.
+        exclude_tags:
+          type: array
+          items: { type: string }
+          description: Blacklist of HTML tags to drop before extraction.
+        reduce_content:
+          type: boolean
+          description: |
+            Trim long content before extraction. Helps on pages with lots
+            of repetitive boilerplate. Uses a sensible default when omitted.
+        experimental:
+          type: boolean
+          default: false
+          description: |
+            Opt in to an alternate extraction path that can do better on
+            hard-to-parse pages. Behavior may change without notice.
+        headers:
+          type: object
+          additionalProperties: { type: string }
+          description: |
+            Custom request headers forwarded to the fetcher. Providing
+            any headers disables URL caching for this request.
+        max_age:
+          type: integer
+          minimum: 0
+          description: |
+            URL-cache opt-in — same three-state semantics as `/scrape`
+            (omitted = no cache, 0 = bypass read but write on miss,
+            `>0` = return entries fresher than N seconds).
+
+            Stealth requests, custom-headered requests, and URLs with
+            query strings or fragments are never cached.
+        stealth:
+          type: boolean
+          default: false
+          description: Use stealth mode. +5 credits.
+
+    SmartScraperData:
+      type: object
+      required: [request_id]
+      properties:
+        request_id:
+          type: string
+          description: Extraction id. Distinct from the envelope's `request_id`.
+        result:
+          description: |
+            The extracted output.
+
+              * When `output_schema` is supplied → a JSON object that
+                matches the schema.
+              * When `plain_text: true` → a string.
+              * Otherwise → a free-shape JSON object inferred from
+                `user_prompt`.
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: array
+              items: {}
+            - type: string
+        latency_ms:
+          type: integer
+          description: Total extraction time in milliseconds.
+
+    SmartScraperSuccess:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          required: [data, credits_used, credits_remaining]
+          properties:
+            status: { type: string, enum: [completed] }
+            data: { $ref: "#/components/schemas/SmartScraperData" }
+            credits_used: { type: integer, example: 5 }
+            credits_remaining: { type: integer, example: 495 }
+
+    # ---- /smartbrowse ----------------------------------------------------
+    SmartBrowseRunDispatchData:
+      type: object
+      required: [run_id, recipe_id, run_status, poll_url, created_at]
+      properties:
+        run_id:
+          type: string
+          example: "k7Xb9dRmQ2p"
+          description: Opaque run ID (~11 base62 chars).
+        recipe_id:
+          type: string
+          example: "m3Yc2tFvN8q"
+          description: Opaque recipe ID (~11 base62 chars).
+        run_status:
+          type: string
+          enum: [running]
+          description: |
+            Always `running` on dispatch. The envelope's outer `status` is
+            `queued` (no work billed yet); the `run_status` here describes
+            the run's own lifecycle.
+        poll_url:
+          type: string
+          example: "/v1/smartbrowse/runs/k7Xb9dRmQ2p"
+        created_at: { type: string, format: date-time }
+
+    SmartBrowseRunQueued:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          required: [data]
+          properties:
+            status: { type: string, enum: [queued] }
+            data: { $ref: "#/components/schemas/SmartBrowseRunDispatchData" }
+
+    SmartBrowseRunStatus:
+      type: string
+      enum: [queued, running, completed, failed, cancelled]
+      description: |
+        Run lifecycle state. Renamed from `status` to avoid colliding
+        with the envelope's outer `status`. `cancelled` appears when the
+        run was force-stopped (e.g. account deletion confirmed while a
+        run was in flight); `failed` covers everything else terminal.
+
+    SmartBrowseRunData:
+      type: object
+      required: [id, recipe_id, run_status, pages_extracted, items_extracted, credits_used, created_at]
+      properties:
+        id:
+          type: string
+          example: "k7Xb9dRmQ2p"
+          description: Opaque run ID (~11 base62 chars).
+        recipe_id:
+          type: string
+          example: "m3Yc2tFvN8q"
+          description: Opaque recipe ID (~11 base62 chars).
+        run_status: { $ref: "#/components/schemas/SmartBrowseRunStatus" }
+        pages_extracted: { type: integer }
+        items_extracted: { type: integer }
+        credits_used: { type: integer }
+        started_at: { type: [string, "null"], format: date-time }
+        completed_at: { type: [string, "null"], format: date-time }
+        error:
+          type: string
+          description: Set only on `failed` / `cancelled` runs. Omitted otherwise.
+        result:
+          type: object
+          description: Present once `run_status` is `completed`. Omitted while running.
+          properties:
+            pages:
+              type: array
+              items:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+            mode: { type: string }
+            drift: { type: number }
+            warnings:
+              type: array
+              items: { type: string }
+        created_at: { type: string, format: date-time }
+
+    SmartBrowseRunSuccess:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          required: [data, credits_used, credits_remaining]
+          properties:
+            status: { type: string, enum: [completed] }
+            data: { $ref: "#/components/schemas/SmartBrowseRunData" }
+            credits_used:
+              type: integer
+              description: Always 0. Polling is free; the run's accrued credits are surfaced in `data.credits_used`.
+              example: 0
+            credits_remaining: { type: integer }
+
+    SmartBrowseLastRun:
+      type: object
+      required: [id, status, pages_extracted, effective_cap, clamped_by_credits, created_at]
+      properties:
+        id:
+          type: string
+          example: "k7Xb9dRmQ2p"
+          description: Opaque run ID (~11 base62 chars).
+        status:
+          $ref: "#/components/schemas/SmartBrowseRunStatus"
+        pages_extracted: { type: integer }
+        effective_cap:
+          type: integer
+          description: |
+            Page ceiling actually applied to this run — `min(plan
+            pages/run, balance / cost_per_page)`. May be lower than the
+            plan cap when the caller's balance was thin at dispatch.
+        clamped_by_credits:
+          type: boolean
+          description: |
+            True when `effective_cap < plan.pages_per_run_cap` at dispatch
+            — i.e. credits, not the plan, was the binding constraint.
+        created_at: { type: string, format: date-time }
+        completed_at:
+          type: string
+          format: date-time
+          description: Omitted while the run is still in flight.
+
+    SmartBrowseUsageData:
+      type: object
+      required:
+        [runs_used_30d, runs_per_month_cap, pages_per_run_cap, cost_per_page,
+         schedules_count, schedules_allowed]
+      properties:
+        runs_used_30d:
+          type: integer
+          description: Runs initiated by this account in the last 30 days.
+        runs_per_month_cap:
+          type: integer
+          description: Hard ceiling from the caller's current plan.
+        pages_per_run_cap:
+          type: integer
+          description: Per-run page ceiling from the caller's current plan.
+        cost_per_page:
+          type: integer
+          description: Credit cost per extracted page.
+        schedules_count:
+          type: integer
+          description: Number of enabled recurring schedules on this account.
+        schedules_allowed:
+          type: boolean
+          description: Whether the caller's plan allows recurring schedules.
+        last_run:
+          oneOf:
+            - $ref: "#/components/schemas/SmartBrowseLastRun"
+            - type: "null"
+          description: The most recent run, or null when the account has never run.
+
+    SmartBrowseUsageSuccess:
+      allOf:
+        - $ref: "#/components/schemas/EnvelopeBase"
+        - type: object
+          required: [data, credits_used, credits_remaining]
+          properties:
+            status: { type: string, enum: [completed] }
+            data: { $ref: "#/components/schemas/SmartBrowseUsageData" }
+            credits_used:
+              type: integer
+              description: Always 0 — polling usage is free.
+              example: 0
+            credits_remaining: { type: integer }
+
+  # ---- reusable error responses ------------------------------------------
+  responses:
+    BadRequest:
+      description: "Malformed request: missing field, invalid JSON, invalid URL."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/EnvelopeError" }
+          example:
+            status: error
+            error:
+              code: invalid_request
+              message: "url is required"
+            request_id: "req_aB3xY9Kp"
+
+    Unauthorized:
+      description: Missing, invalid, or revoked API key.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/EnvelopeError" }
+          example:
+            status: error
+            error:
+              code: unauthorized
+              message: "missing or invalid credentials"
+            request_id: "req_aB3xY9Kp"
+
+    PaymentRequired:
+      description: |
+        Out of credits OR email not verified. Branch on `error.code`:
+        `insufficient_credits` (with `details: {balance, required}`) vs
+        `email_verification_required`.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/EnvelopeError" }
+          examples:
+            insufficient:
+              summary: Out of credits
+              value:
+                status: error
+                error:
+                  code: insufficient_credits
+                  message: "not enough credits to complete this request"
+                  details:
+                    balance: 2
+                    required: 5
+                request_id: "req_aB3xY9Kp"
+            unverified:
+              summary: Email not verified
+              value:
+                status: error
+                error:
+                  code: email_verification_required
+                  message: "verify your email address before spending credits"
+                request_id: "req_aB3xY9Kp"
+
+    Forbidden:
+      description: |
+        The caller is authenticated but not allowed to perform this
+        action.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/EnvelopeError" }
+          example:
+            status: error
+            error:
+              code: forbidden
+              message: "forbidden"
+            request_id: "req_aB3xY9Kp"
+
+    NotFound:
+      description: Resource does not exist or belongs to another user.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/EnvelopeError" }
+          example:
+            status: error
+            error:
+              code: not_found
+              message: "recipe not found"
+            request_id: "req_aB3xY9Kp"
+
+    Conflict:
+      description: |
+        Resource is in a state that disallows the action. The most
+        common case is `account_deletion_pending`: the account is in
+        the 30-day deletion grace window and cannot spend credits until
+        deletion is cancelled.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/EnvelopeError" }
+          example:
+            status: error
+            error:
+              code: account_deletion_pending
+              message: "account is scheduled for deletion — cancel to restore access"
+              details:
+                deletion_scheduled_for: "2026-06-15T12:00:00Z"
+            request_id: "req_aB3xY9Kp"
+
+    ValidationFailed:
+      description: |
+        The request was accepted but extraction failed logically — the
+        output didn't match the requested schema after one repair
+        attempt, or the extraction itself errored.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/EnvelopeError" }
+          example:
+            status: error
+            error:
+              code: validation_failed
+              message: "Output did not match the requested schema after one repair attempt."
+            request_id: "req_aB3xY9Kp"
+
+    RateLimited:
+      description: |
+        Per-plan throttle exceeded. `error.details.reason` distinguishes
+        the cause:
+
+          * `rate_limit_per_min`     — too many requests per minute.
+          * `max_concurrent_requests` — too many in-flight at once.
+          * `sb_runs_per_month`       — SmartBrowse run quota for the
+                                        rolling 30-day window.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/EnvelopeError" }
+          examples:
+            rate_per_min:
+              summary: Request rate exceeds plan
+              value:
+                status: error
+                error:
+                  code: rate_limited
+                  message: "request rate exceeds plan limit — upgrade plan or slow down"
+                  details:
+                    limit_per_min: 60
+                    reason: rate_limit_per_min
+                request_id: "req_aB3xY9Kp"
+            max_concurrent:
+              summary: Too many in-flight requests
+              value:
+                status: error
+                error:
+                  code: rate_limited
+                  message: "too many in-flight requests for plan — upgrade plan or wait"
+                  details:
+                    max_concurrent: 5
+                    reason: max_concurrent_requests
+                request_id: "req_aB3xY9Kp"
+            sb_runs:
+              summary: SmartBrowse monthly run quota exceeded
+              value:
+                status: error
+                error:
+                  code: rate_limited
+                  message: "smartbrowse run quota exceeded for plan — upgrade for more runs"
+                  details:
+                    used: 50
+                    limit: 50
+                    window: "30d"
+                    reason: sb_runs_per_month
+                request_id: "req_aB3xY9Kp"
+
+    InternalError:
+      description: Internal server error. Safe to retry with backoff.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/EnvelopeError" }
+          example:
+            status: error
+            error:
+              code: internal_error
+              message: "internal error"
+            request_id: "req_aB3xY9Kp"
+
+    ExtractionUnavailable:
+      description: |
+        Extraction service is temporarily unreachable. Safe to retry
+        with backoff.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/EnvelopeError" }
+          example:
+            status: error
+            error:
+              code: service_unavailable
+              message: "extraction service is unreachable"
+            request_id: "req_aB3xY9Kp"

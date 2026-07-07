@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "webscrape-ai"
+dynamic = ["version"]
+description = "Official Python SDK for the webscrape.ai web scraping API"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "webscrape.ai", email = "hello@webscrape.ai" }]
+keywords = [
+    "webscrape",
+    "web-scraping",
+    "scraping",
+    "smartscraper",
+    "smartbrowse",
+    "api",
+    "sdk",
+    "crawler",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Typing :: Typed",
+]
+dependencies = ["httpx>=0.24"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-asyncio>=0.23"]
+
+[project.urls]
+Homepage = "https://webscrape.ai"
+Documentation = "https://webscrape.ai/docs"
+Source = "https://github.com/webscrape-ai/webscrape-ai"
+
+[tool.hatch.version]
+path = "src/webscrape_ai/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/webscrape_ai"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/README.md", "/examples"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q"

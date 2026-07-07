@@ -1,0 +1,12 @@
+allowBuilds:
+  esbuild: set this to true or false
+# Standalone package root. This file exists only so pnpm treats this directory
+# as the package root (rather than walking up the filesystem) and to tune pnpm
+# 11's dependency-build gate. It declares no workspace members.
+#
+# esbuild (pulled in by tsup/vitest) ships a prebuilt platform binary and works
+# without running its install script, so a skipped build is not fatal here.
+onlyBuiltDependencies:
+  - esbuild
+strictDepBuilds: false
+verifyDepsBeforeRun: false

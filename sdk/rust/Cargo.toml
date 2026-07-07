@@ -1,0 +1,42 @@
+[package]
+name = "webscrape-ai"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+description = "Official Rust SDK for the webscrape.ai web scraping and LLM-extraction API"
+homepage = "https://webscrape.ai"
+repository = "https://github.com/webscrape-ai/webscrape-ai"
+documentation = "https://docs.rs/webscrape-ai"
+readme = "README.md"
+authors = ["webscrape.ai <hello@webscrape.ai>"]
+keywords = ["scraping", "web-scraping", "api", "sdk", "llm"]
+categories = ["api-bindings", "web-programming::http-client"]
+
+[lib]
+name = "webscrape_ai"
+
+[features]
+default = []
+# Exposes a synchronous `webscrape_ai::blocking::Client` mirroring the async surface.
+blocking = ["reqwest/blocking"]
+
+[dependencies]
+reqwest = { version = "0.12", default-features = false, features = [
+    "rustls-tls",
+    "json",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+# `time` is the only tokio feature the library itself needs (async backoff + the
+# SmartBrowse wait helper are `tokio::time`-based). reqwest's async client already
+# pulls tokio into the tree, so this adds no meaningful weight.
+tokio = { version = "1", default-features = false, features = ["time"] }
+
+[dev-dependencies]
+# Test/examples need the runtime + macros on top of the `time` feature above.
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "rt", "time"] }
+
+[package.metadata.docs.rs]
+all-features = true
