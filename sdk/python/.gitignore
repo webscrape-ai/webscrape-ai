@@ -1,5 +1,6 @@
 # Python SDK local artifacts
 .venv/
+.buildvenv/
 __pycache__/
 *.py[cod]
 .pytest_cache/

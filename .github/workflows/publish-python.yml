@@ -1,0 +1,48 @@
+name: Publish Python SDK to PyPI
+
+# Trusted Publishing (OIDC) — no API tokens. The first run both creates and
+# publishes the project, provided a *pending publisher* is configured on PyPI
+# first (see sdk/python notes / PR description). Publisher fields must match:
+#   PyPI project name : webscrape-ai
+#   Owner             : webscrape-ai
+#   Repository name   : webscrape-ai
+#   Workflow filename : publish-python.yml
+#   Environment name  : pypi
+#
+# Trigger by pushing a tag like `python-v0.1.0`, or run manually from the
+# Actions tab (workflow_dispatch) for the very first publish.
+
+on:
+  push:
+    tags:
+      - "python-v*"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  build-and-publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/webscrape-ai
+    permissions:
+      id-token: write # REQUIRED for Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist and wheel
+        working-directory: sdk/python
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: sdk/python/dist/
