@@ -1,5 +1,7 @@
 # webscrape-ai (Python)
 
+[![PyPI](https://img.shields.io/pypi/v/webscrape-ai.svg)](https://pypi.org/project/webscrape-ai/) [![Python versions](https://img.shields.io/pypi/pyversions/webscrape-ai.svg)](https://pypi.org/project/webscrape-ai/)
+
 Official Python SDK for the [webscrape.ai](https://webscrape.ai) web scraping API.
 Fetch pages, run LLM structured extraction, and dispatch/poll SmartBrowse recipe
 replays — with typed responses, an ergonomic error hierarchy, and automatic,

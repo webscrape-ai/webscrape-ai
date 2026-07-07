@@ -1,5 +1,7 @@
 # webscrape-ai
 
+[![npm](https://img.shields.io/npm/v/webscrape-ai.svg)](https://www.npmjs.com/package/webscrape-ai) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/webscrape-ai/webscrape-ai/blob/main/LICENSE)
+
 Official Node / TypeScript SDK for the [webscrape.ai](https://webscrape.ai) API.
 
 - Zero runtime dependencies — uses the global `fetch` (Node ≥ 18, Bun, Deno, edge runtimes).

@@ -1,5 +1,7 @@
 # webscrape-ai (Rust)
 
+[![crates.io](https://img.shields.io/crates/v/webscrape-ai.svg)](https://crates.io/crates/webscrape-ai) [![docs.rs](https://img.shields.io/docsrs/webscrape-ai)](https://docs.rs/webscrape-ai)
+
 Official Rust SDK for the [webscrape.ai](https://webscrape.ai) API — fetch pages
 and get back HTML, cleaned markdown, links, or LLM-structured JSON, plus
 real-Chrome recipe replay via SmartBrowse.
