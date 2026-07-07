@@ -1,0 +1,60 @@
+# While this folder lives in the product monorepo: the root .gitignore ignores
+# *.json (and lib/, build/, dist/, target/) repo-wide — re-include all JSON here
+# (manifests, fixtures, lockfiles), then re-ignore build output below.
+# After the split into github.com/webscrape-ai/webscrape-ai this file stands
+# alone, so it must be complete by itself (don't rely on monorepo-root rules).
+!*.json
+!**/*.json
+
+# Secrets — examples read WEBSCRAPE_API_KEY; never commit local env files.
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+*.tgz
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Go
+*.test
+coverage.out
+
+# Rust / Java (Maven)
+target/
+
+# Java
+*.class
+*.iml
+.classpath
+.project
+.settings/
+
+# Editors & local AI-tool state
+.idea/
+.vscode/
+.cursor/
+CLAUDE.local.md
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
