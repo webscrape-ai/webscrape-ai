@@ -1,5 +1,7 @@
 # webscrape.ai Go SDK
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/webscrape-ai/webscrape-ai/sdk/go.svg)](https://pkg.go.dev/github.com/webscrape-ai/webscrape-ai/sdk/go) [![Go Report Card](https://goreportcard.com/badge/github.com/webscrape-ai/webscrape-ai/sdk/go)](https://goreportcard.com/report/github.com/webscrape-ai/webscrape-ai/sdk/go)
+
 Official Go client for the [webscrape.ai](https://webscrape.ai) API. Zero
 dependencies (standard library only), context-first, with automatic
 billing-safe retries and a SmartBrowse wait helper.

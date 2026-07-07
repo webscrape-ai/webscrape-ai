@@ -8,7 +8,7 @@ Official client SDKs for the [webscrape.ai](https://webscrape.ai) API.
 
 | Language | Package | Directory |
 |---|---|---|
-| Go | `github.com/webscrape-ai/webscrape-ai/sdk/go` | [`go/`](go/) |
+| Go | [`github.com/webscrape-ai/webscrape-ai/sdk/go`](https://pkg.go.dev/github.com/webscrape-ai/webscrape-ai/sdk/go) | [`go/`](go/) |
 | Python | [`webscrape-ai`](https://pypi.org/project/webscrape-ai/) (import `webscrape_ai`) | [`python/`](python/) |
 | Node / TypeScript | [`webscrape-ai`](https://www.npmjs.com/package/webscrape-ai) | [`node/`](node/) |
 | Rust | [`webscrape-ai`](https://crates.io/crates/webscrape-ai) (lib `webscrape_ai`) | [`rust/`](rust/) |
